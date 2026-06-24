@@ -13,6 +13,7 @@ import { readJson, writeJson } from '../utils/storage';
 
 interface PlayScreenProps {
   space: Space;
+  spaces: Space[];
   songs: Song[];
   songVolume: number;
   activeSongId: string;
@@ -24,6 +25,7 @@ interface PlayScreenProps {
   onSetAmbientVolume: (soundId: string, vol: number) => void;
   onToggleAmbientSound: (soundId: string) => void;
   onSelectSong: (songId: string) => void;
+  onSelectSpace: (space: Space) => void;
   onClose: () => void;
 }
 
@@ -46,6 +48,7 @@ const PLAYLISTS: PlaylistItem[] = [
 
 export const PlayScreen: React.FC<PlayScreenProps> = ({
   space,
+  spaces,
   songs,
   songVolume,
   activeSongId,
@@ -57,6 +60,7 @@ export const PlayScreen: React.FC<PlayScreenProps> = ({
   onSetAmbientVolume,
   onToggleAmbientSound,
   onSelectSong,
+  onSelectSpace,
   onClose,
 }) => {
   const [activePlaylistId, setActivePlaylistId] = useState('city');
@@ -66,6 +70,7 @@ export const PlayScreen: React.FC<PlayScreenProps> = ({
   const [sleepTimer, setSleepTimer] = useState<number | null>(null);
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
   const [showChrome, setShowChrome] = useState(true);
+  const [showSpaceList, setShowSpaceList] = useState(false);
 
   const activeSong = songs.find(song => song.id === activeSongId) || songs[0];
   const activePlaylist = PLAYLISTS.find(playlist => playlist.id === activePlaylistId) || PLAYLISTS[4];
@@ -194,6 +199,54 @@ export const PlayScreen: React.FC<PlayScreenProps> = ({
               >
                 <LucideIcon name="Heart" size={17} />
               </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showSpaceList && (
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 24 }}
+            className="fixed left-0 right-0 bottom-[118px] max-w-md mx-auto z-40 px-4"
+            onClick={event => event.stopPropagation()}
+          >
+            <div className="rounded-3xl border border-white/10 bg-black/65 backdrop-blur-2xl shadow-2xl overflow-hidden">
+              <div className="px-4 pt-3 pb-2 border-b border-white/10 flex items-center justify-between">
+                <div className="text-sm font-bold text-white">空间</div>
+                <button
+                  type="button"
+                  onClick={() => setShowSpaceList(false)}
+                  className="w-8 h-8 rounded-full bg-white/5 text-zinc-300 flex items-center justify-center"
+                >
+                  <LucideIcon name="ChevronDown" size={16} />
+                </button>
+              </div>
+              <div className="max-h-[42vh] overflow-y-auto p-3 grid gap-2">
+                {spaces.map(item => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      setShowSpaceList(false);
+                      onSelectSpace(item);
+                    }}
+                    className={`flex items-center justify-between p-3 rounded-2xl border text-left transition-all ${
+                      item.id === space.id
+                        ? 'border-emerald-400/30 bg-emerald-400/10'
+                        : 'border-white/10 bg-white/5 hover:bg-white/10'
+                    }`}
+                  >
+                    <div>
+                      <div className="text-sm font-semibold text-white">{item.title}</div>
+                      <div className="text-[10px] text-zinc-400 mt-0.5">{item.tag}</div>
+                    </div>
+                    <LucideIcon name="Eye" size={14} className="text-zinc-400" />
+                  </button>
+                ))}
+              </div>
             </div>
           </motion.div>
         )}
@@ -394,24 +447,30 @@ export const PlayScreen: React.FC<PlayScreenProps> = ({
         className="fixed bottom-0 left-0 right-0 max-w-md mx-auto z-50 px-4 pb-5 pt-6 bg-gradient-to-t from-black via-black/85 to-transparent"
         onClick={event => event.stopPropagation()}
       >
-        {!panelOpen && activeAmbients.length > 0 && (
-          <div className="mb-2 flex gap-1.5 overflow-x-auto">
-            {activeAmbients.slice(0, 4).map(sound => (
-              <button
-                key={sound.id}
-                type="button"
-                onClick={() => {
-                  setActiveTab('ambience');
-                  setPanelOpen(true);
-                }}
-                className="px-2.5 py-1 rounded-full bg-black/45 border border-white/10 text-[9px] text-zinc-300 flex items-center gap-1 shrink-0"
-              >
-                <LucideIcon name={sound.icon} size={10} />
-                {sound.name}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="mb-2 flex items-center gap-1.5 overflow-x-auto">
+          {!panelOpen && activeAmbients.length > 0 && activeAmbients.slice(0, 4).map(sound => (
+            <button
+              key={sound.id}
+              type="button"
+              onClick={() => {
+                setActiveTab('ambience');
+                setPanelOpen(true);
+              }}
+              className="px-2.5 py-1 rounded-full bg-black/45 border border-white/10 text-[9px] text-zinc-300 flex items-center gap-1 shrink-0"
+            >
+              <LucideIcon name={sound.icon} size={10} />
+              {sound.name}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setShowSpaceList(prev => !prev)}
+            className="px-2.5 py-1 rounded-full bg-black/45 border border-white/10 text-[9px] text-zinc-300 flex items-center gap-1 shrink-0"
+          >
+            <LucideIcon name="Compass" size={10} />
+            空间
+          </button>
+        </div>
 
         <div className="rounded-3xl bg-zinc-950/85 border border-white/10 backdrop-blur-2xl shadow-2xl overflow-hidden">
           <button

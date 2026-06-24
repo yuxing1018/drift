@@ -8,6 +8,7 @@ import { Space, Song, AmbientSound, HistoryRecord } from './types';
 import { SONGS, AMBIENT_SOUNDS, DEFAULT_SPACES, DEFAULT_MVS } from './data';
 import { AudioEngine } from './utils/audioEngine';
 import { LucideIcon } from './components/LucideIcon';
+import { HomeScreen } from './components/HomeScreen';
 import { PlazaScreen } from './components/PlazaScreen';
 import { PlayScreen } from './components/PlayScreen';
 import { CreateScreen } from './components/CreateScreen';
@@ -22,6 +23,8 @@ type TabType = 'plaza' | 'play' | 'create' | 'profile';
 
 export default function App() {
   const [activeTab, setActiveTab ] = useState<TabType>('plaza');
+  const [currentView, setCurrentView] = useState<'home' | 'app'>('home');
+  const [isFadingOut, setIsFadingOut] = useState(false);
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [mvs] = useState<Space[]>(DEFAULT_MVS);
   
@@ -41,6 +44,11 @@ export default function App() {
 
   // Load spaces on initialization
   useEffect(() => {
+    if (window.location.hash === '#plaza') {
+      setCurrentView('app');
+      setActiveTab('plaza');
+    }
+
     const custom_spaces = readJson<Space[]>('custom_created_spaces', []);
     setSpaces([...DEFAULT_SPACES, ...custom_spaces]);
     
@@ -259,6 +267,21 @@ export default function App() {
     }
   };
 
+  const goToHome = () => {
+    setCurrentView('home');
+    setActiveTab('plaza');
+  };
+
+  const goToPlaza = () => {
+    setCurrentView('app');
+    setActiveTab('plaza');
+  };
+
+  const handleHomeNavigate = () => {
+    goToPlaza();
+    setIsFadingOut(false);
+  };
+
   const handleGenerateVideo = async (prompt: string) => {
     setIsGeneratingVideo(true);
     setVideoError('');
@@ -334,25 +357,40 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white flex flex-col justify-between selection:bg-cyan-500/30 selection:text-cyan-200">
+    <div className={`min-h-screen bg-zinc-950 text-white flex flex-col justify-between selection:bg-cyan-500/30 selection:text-cyan-200 app-shell ${isFadingOut ? 'page-fade-out' : ''}`}>
       
       {/* Centered Device Viewport for Perfect App Aesthetics */}
       <div className="w-full max-w-md mx-auto min-h-screen flex flex-col relative bg-zinc-950 shadow-[0_0_50px_rgba(0,0,0,0.8)] border-x border-zinc-900/40">
         
         {/* Core Screen Render Grid */}
         <div className="flex-1 w-full relative">
+          {currentView === 'home' && (
+            <HomeScreen
+              onOpenPlaza={handleHomeNavigate}
+              onOpenPlay={() => {
+                setCurrentView('app');
+                setActiveTab('play');
+              }}
+              onOpenCreate={() => {
+                setCurrentView('app');
+                setActiveTab('create');
+              }}
+            />
+          )}
           
-          {activeTab === 'plaza' && (
+          {currentView === 'app' && activeTab === 'plaza' && (
             <PlazaScreen
               spaces={spaces}
               mvs={mvs}
               onSelectSpace={selectSpaceAction}
+              onOpenProfile={() => setActiveTab('profile')}
             />
           )}
 
-          {activeTab === 'play' && activeSpace && (
+          {currentView === 'app' && activeTab === 'play' && activeSpace && (
             <PlayScreen
               space={activeSpace}
+              spaces={spaces}
               songs={SONGS}
               songVolume={songVolume}
               activeSongId={activeSongId}
@@ -364,11 +402,12 @@ export default function App() {
               onSetAmbientVolume={handleSetAmbientVolume}
               onToggleAmbientSound={handleToggleAmbientSound}
               onSelectSong={handleSelectSong}
+              onSelectSpace={selectSpaceAction}
               onClose={() => setActiveTab('plaza')}
             />
           )}
 
-          <div className={activeTab === 'create' ? 'block' : 'hidden'}>
+          <div className={currentView === 'app' && activeTab === 'create' ? 'block' : 'hidden'}>
             <CreateScreen
               songs={SONGS}
               ambientSounds={AMBIENT_SOUNDS}
@@ -382,7 +421,7 @@ export default function App() {
             />
           </div>
 
-          {activeTab === 'profile' && (
+          {currentView === 'app' && activeTab === 'profile' && (
             <ProfileScreen
               spaces={spaces}
               songs={SONGS}
@@ -396,10 +435,9 @@ export default function App() {
         </div>
 
         {/* Global Floating Bottom Navigation Bar aligned with screenshot exactly */}
-        {activeTab !== 'play' && (
-          <>
+        <>
           <AnimatePresence>
-            {videoJob && activeTab !== 'create' && (
+            {currentView === 'app' && videoJob && activeTab !== 'create' && (
               <VideoGenerationToast
                 job={videoJob}
                 onOpenCreate={() => setActiveTab('create')}
@@ -409,7 +447,10 @@ export default function App() {
           <NowPlayingBanner
             song={SONGS.find(s => s.id === activeSongId) || SONGS[0]}
             isPlaying={isPlaying}
-            onOpenPlayer={() => setActiveTab('play')}
+            onOpenPlayer={() => {
+              setCurrentView('app');
+              setActiveTab('play');
+            }}
             onTogglePlay={handleTogglePlay}
             onNextSong={handleNextSong}
           />
@@ -418,12 +459,32 @@ export default function App() {
               style={{ contentVisibility: 'auto' }}
               className="flex items-center justify-between px-3 py-2 bg-neutral-900/90 border border-white/5 backdrop-blur-xl rounded-full shadow-2xl"
             >
+              {/* Tab 0: Home */}
+              <button
+                onClick={() => {
+                  setCurrentView('home');
+                  setActiveTab('plaza');
+                }}
+                className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full transition-all duration-350 cursor-pointer text-xs font-semibold ${
+                  currentView === 'home' && activeTab === 'plaza'
+                    ? 'bg-[#4ade80] text-black font-bold shadow-[0_4px_12px_rgba(74,222,128,0.3)]'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                <div className="w-4 h-4 flex items-center justify-center">
+                  <LucideIcon name="Compass" size={15} />
+                </div>
+                <span>首页</span>
+              </button>
               
               {/* Tab 1: Plaza (广场) */}
               <button
-                onClick={() => setActiveTab('plaza')}
+                onClick={() => {
+                  setCurrentView('app');
+                  setActiveTab('plaza');
+                }}
                 className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full transition-all duration-350 cursor-pointer text-xs font-semibold ${
-                  activeTab === 'plaza'
+                  currentView === 'app' && activeTab === 'plaza'
                     ? 'bg-[#4ade80] text-black font-bold shadow-[0_4px_12px_rgba(74,222,128,0.3)]'
                     : 'text-zinc-400 hover:text-white'
                 }`}
@@ -436,7 +497,10 @@ export default function App() {
 
               {/* Tab 2: Play (播放) */}
               <button
-                onClick={() => setActiveTab('play')}
+                onClick={() => {
+                  setCurrentView('app');
+                  setActiveTab('play');
+                }}
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-full transition-all duration-350 cursor-pointer text-xs font-semibold ${
                   activeTab === 'play'
                     ? 'bg-[#4ade80] text-black font-bold shadow-[0_4px_12px_rgba(74,222,128,0.3)]'
@@ -454,7 +518,10 @@ export default function App() {
 
               {/* Tab 3: Create (创建) */}
               <button
-                onClick={() => setActiveTab('create')}
+                onClick={() => {
+                  setCurrentView('app');
+                  setActiveTab('create');
+                }}
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-full transition-all duration-350 cursor-pointer text-xs font-semibold ${
                   activeTab === 'create'
                     ? 'bg-[#4ade80] text-black font-bold shadow-[0_4px_12px_rgba(74,222,128,0.3)]'
@@ -467,28 +534,11 @@ export default function App() {
                 <span>创建</span>
               </button>
 
-              {/* Tab 4: Profile (我的) */}
-              <button
-                onClick={() => setActiveTab('profile')}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-full transition-all duration-350 cursor-pointer text-xs font-semibold ${
-                  activeTab === 'profile'
-                    ? 'bg-[#4ade80] text-black font-bold shadow-[0_4px_12px_rgba(74,222,128,0.3)]'
-                    : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                <div className="w-4 h-4 flex items-center justify-center">
-                  <LucideIcon name="User" size={15} />
-                </div>
-                <span>我的</span>
-              </button>
-
             </div>
           </div>
           </>
-        )}
 
       </div>
     </div>
   );
 }
-

@@ -12,12 +12,14 @@ interface PlazaScreenProps {
   spaces: Space[];
   mvs: Space[];
   onSelectSpace: (space: Space) => void;
+  onOpenProfile: () => void;
 }
 
 export const PlazaScreen: React.FC<PlazaScreenProps> = ({
   spaces,
   mvs,
   onSelectSpace,
+  onOpenProfile,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchModal, setShowSearchModal] = useState(false);
@@ -163,9 +165,19 @@ export const PlazaScreen: React.FC<PlazaScreenProps> = ({
           >
             <LucideIcon name="Search" size={18} />
           </button>
-          <div className="w-10 h-10 rounded-full bg-indigo-950/80 border border-indigo-500/30 flex items-center justify-center font-bold text-sm text-indigo-300 select-none">
-            Sx
-          </div>
+          <button
+            type="button"
+            onClick={onOpenProfile}
+            className="w-10 h-10 rounded-full bg-indigo-950/80 border border-indigo-500/30 overflow-hidden flex items-center justify-center select-none cursor-pointer"
+            aria-label="进入我的主页"
+          >
+            <img
+              src="/picture/头像.jpeg"
+              alt=""
+              aria-hidden="true"
+              className="w-full h-full object-cover"
+            />
+          </button>
         </div>
       </div>
 
